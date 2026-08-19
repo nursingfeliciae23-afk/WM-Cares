@@ -552,3 +552,117 @@ elif menu_kategori == "Timbang Terima (SBAR)":
         st.divider()
         st.subheader("📜 Riwayat Catatan Timbang Terima SBAR")
         st.dataframe(pd.DataFrame(st.session_state.data_handover), use_container_width=True)
+# ==========================================
+# 9. SENTRALISASI OBAT (REVISI 19, 20, 22)
+# ==========================================
+elif menu_kategori == "Sentralisasi Obat":
+    st.title("💊 Modul Sentralisasi & Pengelolaan Obat Pasien")
+    
+    tab1, tab2 = st.tabs(["Form Sentralisasi & ACC Farmasi", "Daftar & Status Obat Pasien"])
+    
+    with tab1:
+        # REVISI 19: VERIFIKASI 6 BENAR OBAT & FORM ACC FARMASI & PERAWAT
+        st.subheader("Formulir Penerimaan & Verifikasi Obat Pasien")
+        
+        with st.form("form_obat_6benar"):
+            pasien_o = st.selectbox("Pasien", [f"{p['No_RM']} - {p['Nama']}" for p in st.session_state.data_pasien])
+            nama_obat = st.text_input("Nama Obat, Dosis, & Frekuensi (misal: Ceftriaxone 2x1gr)")
+            rute_o = st.selectbox("Rute Pemberian", ["IV / Injeksi", "Oral", "SC / IM", "Topikal", "Inhalasi"])
+            stok_o = st.number_input("Jumlah Stok Obat Diterima", min_value=1, value=10)
+            
+            st.markdown("**Verifikasi Keamanan 6 Benar Obat:**")
+            c_b1, c_b2 = st.columns(2)
+            b1 = c_b1.checkbox("1. Benar Pasien")
+            b2 = c_b1.checkbox("2. Benar Obat")
+            b3 = c_b1.checkbox("3. Benar Dosis")
+            b4 = c_b2.checkbox("4. Benar Rute Pemberian")
+            b5 = c_b2.checkbox("5. Benar Waktu Pemberian")
+            b6 = c_b2.checkbox("6. Benar Dokumentasi")
+            
+            st.markdown("**Persetujuan / ACC Verifikasi:**")
+            c_acc1, c_acc2, c_acc3 = st.columns(3)
+            acc_farmasi = c_acc1.text_input("Nama Apoteker / Farmasi ACC", value="apt. Sarah, S.Farm")
+            acc_perawat = c_acc2.selectbox("Perawat Penerima", [p["Nama"] for p in st.session_state.data_perawat])
+            status_o = c_acc3.selectbox("Status Awal Obat", ["Diterima", "Sedang Dalam Proses", "Habis"])
+            ttd_o = st.text_input("Tanda Tangan Elektronik Perawat", value="e-signed")
+            
+            if st.form_submit_button("Simpan Data Sentralisasi Obat"):
+                if b1 and b2 and b3 and b4 and b5 and b6:
+                    st.session_state.data_obat.append({
+                        "Waktu": datetime.datetime.now().strftime("%d/%m/%Y %H:%M"),
+                        "Pasien": pasien_o,
+                        "Obat": nama_obat,
+                        "Rute": rute_o,
+                        "Stok": stok_o,
+                        "Status": status_o,
+                        "ACC_Farmasi": acc_farmasi,
+                        "Perawat_Penerima": acc_perawat,
+                        "TTD": ttd_o
+                    })
+                    st.success("Obat berhasil diverifikasi 6 Benar dan disimpan!")
+                    st.rerun()
+                else:
+                    st.error("Gagal! Seluruh prinsip 6 Benar Obat wajib dicentang untuk keamanan pasien.")
+
+    with tab2:
+        # REVISI 20: STATUS DAFTAR OBAT SETIAP PASIEN
+        st.subheader("Daftar Obat Pasien & Status Ketersediaan Real-Time")
+        if st.session_state.data_obat:
+            st.dataframe(pd.DataFrame(st.session_state.data_obat), use_container_width=True)
+            
+            st.divider()
+            st.markdown("### Update Status Obat Pasien")
+            with st.form("form_update_status_obat"):
+                idx_o = st.selectbox("Pilih Urutan Obat untuk Di-update", range(len(st.session_state.data_obat)), format_func=lambda x: f"{st.session_state.data_obat[x]['Pasien']} - {st.session_state.data_obat[x]['Obat']}")
+                new_st = st.selectbox("Update Status Terbaru", ["Diterima", "Sedang Dalam Proses", "Habis"])
+                if st.form_submit_button("Update Status Obat"):
+                    st.session_state.data_obat[idx_o]['Status'] = new_st
+                    st.success("Status Obat Diperbarui!")
+                    st.rerun()
+        else:
+            st.info("Belum ada data obat tersentralisasi.")
+
+# ==========================================
+# 10. DISCHARGE PLANNING (REVISI 21, 22)
+# ==========================================
+elif menu_kategori == "Discharge Planning":
+    st.title("🚪 Modul Discharge Planning (Perencanaan Pulang)")
+    
+    if st.session_state.data_pasien:
+        with st.form("form_discharge"):
+            st.subheader("Formulir Perencanaan Pulang Pasien")
+            pasien_dc = st.selectbox("Pilih Pasien Rencana Pulang", [f"{p['No_RM']} - {p['Nama']} ({p['Diagnosis']})" for p in st.session_state.data_pasien])
+            tgl_pulang = st.date_input("Rencana Tanggal Pulang")
+            
+            # REVISI 21: VARIASI EDUKASI DISCHARGE PLANNING
+            st.markdown("**Variasi Edukasi & Check-list Kesiapan Kepulangan Pasien:**")
+            cd1, cd2 = st.columns(2)
+            e1 = cd1.checkbox("Edukasi Aturan, Aturan Dosis, & Efek Samping Obat Pulang")
+            e2 = cd1.checkbox("Edukasi Diit Khusus & Nutrisi di Rumah")
+            e3 = cd1.checkbox("Edukasi Perawatan Luka / Perawatan Alat Medis di Rumah")
+            e4 = cd2.checkbox("Edukasi Batasan Aktivitas Fisik & Mobilisasi")
+            e5 = cd2.checkbox("Edukasi Tanda-Tanda Bahaya & Kapan Harus ke IGD")
+            e6 = cd2.checkbox("Penjadwalan Kontrol Ulang Poli Spesialis")
+            
+            catatan_dc = st.text_area("Catatan Khusus Resume Kepulangan Pasien")
+            perawat_dc = cd1.selectbox("Perawat Edukator", [p["Nama"] for p in st.session_state.data_perawat])
+            ttd_dc = cd2.text_input("Tanda Tangan Elektronik", value="e-signed")
+            
+            if st.form_submit_button("Simpan Discharge Planning"):
+                waktu_dc = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
+                st.session_state.data_discharge.append({
+                    "Waktu_Input": waktu_dc,
+                    "Pasien": pasien_dc,
+                    "Tgl_Pulang": str(tgl_pulang),
+                    "Status_Edukasi": "Lengkap" if (e1 and e2 and e3 and e4 and e5 and e6) else "Belum Lengkap",
+                    "Catatan": catatan_dc,
+                    "Perawat": perawat_dc,
+                    "TTD": ttd_dc
+                })
+                st.success(f"Discharge planning pasien berhasil diproses pada {waktu_dc}!")
+                st.rerun()
+
+    if st.session_state.data_discharge:
+        st.divider()
+        st.subheader("📋 Log Perencanaan Kepulangan Pasien (Discharge Planning)")
+        st.dataframe(pd.DataFrame(st.session_state.data_discharge), use_container_width=True)
